@@ -1,0 +1,26 @@
+/*
+ * H1-H6 标记使用零宽度定位，不会占用正文宽度或触发标题横向跳动。
+ * 淡化显示以保留层级提示，同时避免干扰阅读。
+ */
+.stable-heading-editor-marker {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 1em;
+  overflow: visible;
+  pointer-events: none;
+  user-select: none;
+  vertical-align: baseline;
+}
+
+.stable-heading-editor-marker-label {
+  position: absolute;
+  right: 2rem;
+  bottom: 0;
+  color: var(--text-faint);
+  font-family: var(--font-monospace);
+  font-size: 0.58em;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
