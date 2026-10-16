@@ -14,6 +14,7 @@ const codeBlockNodes = new Set(["FencedCode", "IndentedCode", "CodeBlock"]);
 
 class HeadingMarkerViewPlugin {
   decorations: DecorationSet;
+  atomicRanges: DecorationSet = Decoration.none;
 
   constructor(view: EditorView) {
     this.decorations = this.buildDecorations(view);
@@ -28,10 +29,11 @@ class HeadingMarkerViewPlugin {
   /**
    * 直接扫描可见行的标题前缀，兼容不同版本 Markdown 语法树的标题节点名称。
    * 同时仍通过语法树排除代码块，避免把代码里的 # 误判为标题。
-   * 用行样式显示 H1-H6，避免在正文输入边界插入组件、干扰中文输入法。
+   * 用行样式显示 H1-H6；仅折叠井号，保留分隔空格作为输入法的文本落点。
    */
   private buildDecorations(view: EditorView): DecorationSet {
     const builder = new RangeSetBuilder<Decoration>();
+    const atomicBuilder = new RangeSetBuilder<Decoration>();
     const decoratedLines = new Set<number>();
 
     for (const range of view.visibleRanges) {
@@ -50,7 +52,7 @@ class HeadingMarkerViewPlugin {
         }
 
         const from = line.from + match[1].length;
-        const to = from + match[2].length + match[3].length;
+        const to = from + match[2].length;
         builder.add(
           line.from,
           line.from,
@@ -64,13 +66,31 @@ class HeadingMarkerViewPlugin {
         builder.add(
           from,
           to,
-          // 保留文本 DOM，避免替换组件及其缓冲节点打断输入法组合输入。
-          Decoration.mark({ class: "stable-heading-editor-prefix" })
+          // 不折叠分隔空格，避免正文首字的组合输入紧邻替换组件。
+          Decoration.replace({ inclusive: false })
+        );
+        // 只对分隔空格抵消一次宽度，输入法预编辑文字仍使用正常字距。
+        builder.add(
+          to,
+          to + match[3].length,
+          Decoration.mark({
+            class: "stable-heading-editor-separator",
+            attributes: {
+              style: `--stable-heading-separator-width: ${match[3].length}ch`
+            }
+          })
+        );
+        // 光标跳过整个隐藏前缀，分隔空格仍保留在 DOM 中供输入法使用。
+        atomicBuilder.add(
+          from,
+          to + match[3].length,
+          Decoration.mark({})
         );
         decoratedLines.add(line.number);
       }
     }
 
+    this.atomicRanges = atomicBuilder.finish();
     return builder.finish();
   }
 
@@ -98,7 +118,7 @@ const headingMarkerExtension = ViewPlugin.fromClass(HeadingMarkerViewPlugin, {
   decorations: (value) => value.decorations,
   provide: (plugin) =>
     EditorView.atomicRanges.of((view) =>
-      view.plugin(plugin)?.decorations ?? Decoration.none
+      view.plugin(plugin)?.atomicRanges ?? Decoration.none
     )
 });
 

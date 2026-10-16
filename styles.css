@@ -1,18 +1,14 @@
-/* 隐藏 Markdown 前缀，保留文本 DOM，不在输入边界创建不可编辑组件。 */
-.stable-heading-editor-prefix {
-  display: none;
-}
-
 /* 层级提示固定在行左侧，不占正文宽度。 */
 .cm-line.stable-heading-editor-line {
   position: relative;
 }
 
-.cm-line.stable-heading-editor-line::before {
+.cm-line.stable-heading-editor-line::after {
   content: attr(data-heading-level);
   position: absolute;
   right: calc(100% + 2rem);
-  bottom: 0;
+  /* 不锚定行底边，避免编辑前缀折叠后标签随行高变化。 */
+  margin-top: calc(1em - 2px);
   color: var(--text-faint);
   font-family: var(--font-monospace);
   font-size: 0.58em;
@@ -21,4 +17,17 @@
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
+}
+
+/* 保留原生标题前缀的正常字高，避免标题起点光标高度变为零。 */
+.markdown-source-view.mod-cm6 .cm-line.stable-heading-editor-line .cm-formatting-header {
+  font-size: inherit !important;
+}
+
+/* 一次性抵消分隔空格宽度，不压缩输入法预编辑文字的逐字间距。 */
+.markdown-source-view.mod-cm6 .cm-line.stable-heading-editor-line .stable-heading-editor-separator {
+  font-family: monospace;
+  letter-spacing: normal;
+  tab-size: 1;
+  margin-inline-start: calc(-1 * var(--stable-heading-separator-width));
 }
