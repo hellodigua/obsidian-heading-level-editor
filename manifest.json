@@ -1,7 +1,7 @@
 {
   "id": "stable-heading-editor",
   "name": "Stable Heading Editor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minAppVersion": "1.0.0",
   "description": "在实时预览中隐藏标题 Markdown 标记，避免光标聚焦时标题跳动。",
   "author": "digua",
