@@ -6,35 +6,11 @@ import {
   DecorationSet,
   EditorView,
   ViewPlugin,
-  ViewUpdate,
-  WidgetType
+  ViewUpdate
 } from "@codemirror/view";
 
 const headingPrefix = /^(\s{0,3})(#{1,6})([ \t]+)/;
 const codeBlockNodes = new Set(["FencedCode", "IndentedCode", "CodeBlock"]);
-
-class HeadingLevelMarker extends WidgetType {
-  constructor(private readonly level: number) {
-    super();
-  }
-
-  eq(other: HeadingLevelMarker): boolean {
-    return this.level === other.level;
-  }
-
-  toDOM(): HTMLElement {
-    const marker = document.createElement("span");
-    marker.addClass("stable-heading-editor-marker");
-    marker.setAttribute("aria-hidden", "true");
-
-    const label = document.createElement("span");
-    label.addClass("stable-heading-editor-marker-label");
-    label.textContent = `H${this.level}`;
-    marker.append(label);
-
-    return marker;
-  }
-}
 
 class HeadingMarkerViewPlugin {
   decorations: DecorationSet;
@@ -52,7 +28,7 @@ class HeadingMarkerViewPlugin {
   /**
    * 直接扫描可见行的标题前缀，兼容不同版本 Markdown 语法树的标题节点名称。
    * 同时仍通过语法树排除代码块，避免把代码里的 # 误判为标题。
-   * 用零宽度组件显示 H1-H6，使层级提示固定在标题左侧而不挤压正文。
+   * 用行样式显示 H1-H6，避免在正文输入边界插入组件、干扰中文输入法。
    */
   private buildDecorations(view: EditorView): DecorationSet {
     const builder = new RangeSetBuilder<Decoration>();
@@ -76,9 +52,20 @@ class HeadingMarkerViewPlugin {
         const from = line.from + match[1].length;
         const to = from + match[2].length + match[3].length;
         builder.add(
+          line.from,
+          line.from,
+          Decoration.line({
+            attributes: {
+              class: "stable-heading-editor-line",
+              "data-heading-level": `H${match[2].length}`
+            }
+          })
+        );
+        builder.add(
           from,
           to,
-          Decoration.replace({ widget: new HeadingLevelMarker(match[2].length) })
+          // 保留文本 DOM，避免替换组件及其缓冲节点打断输入法组合输入。
+          Decoration.mark({ class: "stable-heading-editor-prefix" })
         );
         decoratedLines.add(line.number);
       }
